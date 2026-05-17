@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@import "tailwindcss";
+
+body {
+  background-color: #f0f4f8;
+  color: #1a202c;
+}
+
+/* Base tailwind directives */
+@layer utilities {
+  .animate-spin-slow {
+    animation: spin 3s linear infinite;
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up 0.3s ease-out forwards;
+  }
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

@@ -48,6 +48,32 @@ export default function Dashboard() {
     }
   };
 
+  const fetchSlots = async () => {
+    try {
+      const res = await fetch('/api/check-slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          jwtToken,
+          purpose: filterPurpose,
+          type: filterType,
+          port: filterPort
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success && data.slots && data.slots.length > 0) {
+        setActiveSlots(prev => {
+          const newSlots = [...data.slots, ...prev];
+          const unique = Array.from(new Map(newSlots.map(item => [item.id, item])).values());
+          return unique.slice(0, 10);
+        });
+      }
+    } catch (e) {
+      console.error('Polling error', e);
+    }
+  };
+
   const connectEngine = async () => {
     if (!jwtToken) {
       setJwtError('يرجى إدخال التوكن');
@@ -65,31 +91,7 @@ export default function Dashboard() {
     // Start Polling via Next.js API Routes (Serverless)
     if (pollingRef.current) clearInterval(pollingRef.current);
     
-    pollingRef.current = setInterval(async () => {
-      try {
-        const res = await fetch('/api/check-slots', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            jwtToken,
-            purpose: filterPurpose,
-            type: filterType,
-            port: filterPort
-          })
-        });
-        
-        const data = await res.json();
-        if (data.success && data.slots && data.slots.length > 0) {
-          setActiveSlots(prev => {
-            const newSlots = [...data.slots, ...prev];
-            const unique = Array.from(new Map(newSlots.map(item => [item.id, item])).values());
-            return unique.slice(0, 10);
-          });
-        }
-      } catch (e) {
-        console.error('Polling error', e);
-      }
-    }, 2000); // Check every 2 seconds
+    pollingRef.current = setInterval(fetchSlots, 2000); // Check every 2 seconds
   };
 
   const handleBook = async (slotId: number, truckId: number) => {
@@ -363,14 +365,24 @@ export default function Dashboard() {
         ) : (
           /* SLOTS VIEW */
           <div className="bg-white rounded-lg shadow-sm border border-gray-100 min-h-[600px] p-6 relative">
-            <button 
-              onClick={() => setCurrentView('input')}
-              className="absolute top-6 left-6 text-gray-500 hover:text-gray-800 bg-gray-100 px-4 py-2 rounded text-sm font-bold border border-gray-200"
-            >
-              ← رجوع
-            </button>
-            
-            <h2 className="text-2xl font-bold text-[#1e293b] mb-6 border-b pb-4">المواعيد المتاحة</h2>
+            <div className="flex justify-between items-center mb-6 border-b pb-4">
+              <h2 className="text-2xl font-bold text-[#1e293b]">المواعيد المتاحة</h2>
+              <div className="flex gap-4">
+                <button 
+                  onClick={fetchSlots}
+                  className="bg-[#0ea5e9] hover:bg-[#0284c7] text-white px-4 py-2 rounded text-sm font-bold flex items-center gap-2 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                  تحديث
+                </button>
+                <button 
+                  onClick={() => setCurrentView('input')}
+                  className="text-gray-500 hover:text-gray-800 bg-gray-100 px-4 py-2 rounded text-sm font-bold border border-gray-200 transition-colors"
+                >
+                  ← رجوع
+                </button>
+              </div>
+            </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-right border-collapse">

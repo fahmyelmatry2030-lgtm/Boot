@@ -1,16 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import io from 'socket.io-client';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
 
 export default function Dashboard() {
   const [activeSlots, setActiveSlots] = useState<{id: number, port: string, time: string, status: string, type: string, availableTrucks: number}[]>([]);
-  const [socket, setSocket] = useState<any>(null);
   const [engineStatus, setEngineStatus] = useState('غير متصل');
   const [isMonitoring, setIsMonitoring] = useState(false);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
   
   const { trucks, accounts, addTruck, removeAccount, updateTruckStatus } = useStore();
 
@@ -31,24 +28,10 @@ export default function Dashboard() {
   }, [truckCount]);
 
   useEffect(() => {
-    const newSocket = io(BACKEND_URL);
-    setSocket(newSocket);
-
-    newSocket.on('connect', () => {
-      setEngineStatus('متصل بالخادم');
-    });
-
-    newSocket.on('engine_login_success', () => {
-      setEngineStatus('الرادار نشط 🟢');
-      setIsMonitoring(true);
-      setCurrentView('input'); // Proceed to dashboard after successful JWT connection
-    });
-
-    newSocket.on('engine_slot_found', (data) => {
-      setActiveSlots(prev => [data, ...prev].slice(0, 10)); // Keep last 10 slots
-    });
-
-    return () => { newSocket.close(); }
+    // Cleanup polling on unmount
+    return () => { 
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    }
   }, []);
 
   const handleSystemLogin = () => {
@@ -65,40 +48,68 @@ export default function Dashboard() {
       setJwtError('يرجى إدخال التوكن');
       return;
     }
-    if (!socket || !socket.id) {
-      setJwtError('جاري الاتصال بالسيرفر المركزي، انتظر قليلاً...');
-      return;
-    }
-    setEngineStatus('جاري التحقق من التوكن...');
-    try {
-      await fetch(`${BACKEND_URL}/api/start-engine`, { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jwtToken, socketId: socket.id })
-      });
-      setJwtError('');
-      // View change is handled by engine_login_success socket event
-    } catch (e) {
-      console.error('Failed to start engine', e);
-      setEngineStatus('خطأ في الاتصال');
-      setJwtError('فشل الاتصال بمنصة فسح');
-    }
+    
+    setEngineStatus('جاري تفعيل الرادار الداخلي (Vercel)...');
+    
+    // Switch view immediately to feel fast
+    setJwtError('');
+    setIsMonitoring(true);
+    setEngineStatus('الرادار نشط 🟢 (بدون خادم خارجي)');
+    setCurrentView('input');
+    
+    // Start Polling via Next.js API Routes (Serverless)
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await fetch('/api/check-slots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jwtToken })
+        });
+        
+        const data = await res.json();
+        if (data.success && data.slots && data.slots.length > 0) {
+          setActiveSlots(prev => {
+            const newSlots = [...data.slots, ...prev];
+            const unique = Array.from(new Map(newSlots.map(item => [item.id, item])).values());
+            return unique.slice(0, 10);
+          });
+        }
+      } catch (e) {
+        console.error('Polling error', e);
+      }
+    }, 2000); // Check every 2 seconds
   };
 
-  const handleBook = (slotId: number, truckId: number) => {
+  const handleBook = async (slotId: number, truckId: number) => {
     const key = `${slotId}-${truckId}`;
     setBookingStatuses(prev => ({ ...prev, [key]: 'loading' }));
     
-    // Simulate booking delay and success
-    setTimeout(() => {
-      setBookingStatuses(prev => ({ ...prev, [key]: 'success' }));
-      updateTruckStatus(truckId, 'Booked'); // Remove truck from pool
+    try {
+      const res = await fetch('/api/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jwtToken, slotId, truckId })
+      });
+      const data = await res.json();
       
-      const truckSequence = trucks.find(t => t.id === truckId)?.sequence || 'غير معروف';
-      setToastMessage(`🎉 تم قنص موعد للشاحنة (${truckSequence}) بنجاح!`);
-      
-      setTimeout(() => setToastMessage(''), 4000); // Hide toast after 4s
-    }, 800);
+      if (data.success) {
+        setBookingStatuses(prev => ({ ...prev, [key]: 'success' }));
+        updateTruckStatus(truckId, 'Booked');
+        
+        const truckSequence = trucks.find(t => t.id === truckId)?.sequence || 'غير معروف';
+        setToastMessage(`🎉 تم قنص موعد للشاحنة (${truckSequence}) بنجاح! المرجع: ${data.reference}`);
+        
+        setTimeout(() => setToastMessage(''), 5000);
+      } else {
+        setBookingStatuses(prev => ({ ...prev, [key]: 'idle' }));
+        alert('فشل الحجز: ' + data.error);
+      }
+    } catch (e) {
+      setBookingStatuses(prev => ({ ...prev, [key]: 'idle' }));
+      alert('حدث خطأ أثناء الاتصال');
+    }
   };
 
   const handleSaveAllTrucks = () => {

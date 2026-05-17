@@ -35,14 +35,16 @@ export default function Dashboard() {
   useEffect(() => {
     // Restore session on load
     const savedToken = localStorage.getItem('fasah_jwtToken');
+    const savedCookie = localStorage.getItem('fasah_cookie');
     const isLoggedIn = localStorage.getItem('fasah_isLoggedIn');
     const savedView = localStorage.getItem('fasah_currentView') as typeof currentView;
     
     if (isLoggedIn === 'true') {
-      if (savedToken) {
+      if (savedToken && savedCookie) {
         setJwtToken(savedToken);
+        setSessionCookie(savedCookie);
         setIsMonitoring(true);
-        setEngineStatus('الرادار نشط 🟢 (بدون خادم خارجي)');
+        setEngineStatus('الرادار نشط 🟢 (متصل بفسح)');
         setCurrentView(savedView && savedView === 'slots' ? 'slots' : 'input');
       } else {
         setCurrentView('jwt-connect');
@@ -57,7 +59,7 @@ export default function Dashboard() {
 
   // Handle automatic polling when monitoring is active
   useEffect(() => {
-    if (isMonitoring && jwtToken) {
+    if (isMonitoring && jwtToken && sessionCookie) {
       if (pollingRef.current) clearInterval(pollingRef.current);
       // Run once immediately, then every 2 seconds
       fetchSlots();
@@ -69,7 +71,7 @@ export default function Dashboard() {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
-  }, [isMonitoring, jwtToken, filterPurpose, filterType, filterPort, trucks]);
+  }, [isMonitoring, jwtToken, sessionCookie, filterPurpose, filterType, filterPort, trucks]);
 
   // Persist view state
   useEffect(() => {
@@ -113,6 +115,7 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           jwtToken,
+          sessionCookie,
           purpose: filterPurpose,
           type: filterType,
           port: filterPort,
@@ -245,16 +248,33 @@ export default function Dashboard() {
           <div className="space-y-4">
             <div>
               <textarea 
-                placeholder="eyJhbGciOiJIUzUxMiJ9..."
-                className="w-full bg-gray-50 border border-gray-200 rounded p-4 text-gray-800 outline-none focus:border-[#0ea5e9] text-left font-mono text-sm h-32 resize-none"
+                placeholder="التوكن يبدأ بكلمة Bearer..."
+                className="w-full bg-gray-50 border border-gray-200 rounded p-3 text-gray-800 outline-none focus:border-[#0ea5e9] text-left font-mono text-sm h-24 resize-none mb-2"
                 value={jwtToken}
                 onChange={e => setJwtToken(e.target.value)}
+                dir="ltr"
+              ></textarea>
+              <textarea 
+                placeholder="انسخ الـ Cookie بالكامل والصقه هنا لتخطي الجدار الناري..."
+                className="w-full bg-gray-50 border border-gray-200 rounded p-3 text-gray-800 outline-none focus:border-[#0ea5e9] text-left font-mono text-sm h-24 resize-none"
+                value={sessionCookie}
+                onChange={e => setSessionCookie(e.target.value)}
                 dir="ltr"
               ></textarea>
               {jwtError && <p className="text-red-500 text-sm mt-2">{jwtError}</p>}
             </div>
             <button 
-              onClick={connectEngine}
+              onClick={() => {
+                if (jwtToken.length > 20 && sessionCookie.length > 20) {
+                  localStorage.setItem('fasah_jwtToken', jwtToken);
+                  localStorage.setItem('fasah_cookie', sessionCookie);
+                  setIsMonitoring(true);
+                  setEngineStatus('الرادار نشط 🟢 (متصل بفسح)');
+                  setCurrentView('input');
+                } else {
+                  setJwtError('يرجى إدخال التوكن والكوكيز بشكل صحيح!');
+                }
+              }}
               className="w-full bg-[#10b981] hover:bg-[#059669] text-white font-bold py-4 rounded transition-colors text-lg flex items-center justify-center gap-2"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
@@ -297,8 +317,10 @@ export default function Dashboard() {
               setIsMonitoring(false);
               localStorage.removeItem('fasah_isLoggedIn');
               localStorage.removeItem('fasah_jwtToken');
+              localStorage.removeItem('fasah_cookie');
               localStorage.removeItem('fasah_currentView');
               setJwtToken('');
+              setSessionCookie('');
               setCurrentView('system-login');
             }} 
             className="text-gray-500 hover:text-red-500 font-medium px-4 py-2 rounded-md transition-colors text-sm"

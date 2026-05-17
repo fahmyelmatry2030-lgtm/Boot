@@ -7,7 +7,7 @@ import { useStore } from '../store';
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
 
 export default function Dashboard() {
-  const [activeSlots, setActiveSlots] = useState<{id: number, port: string, time: string, status: string, type: string}[]>([]);
+  const [activeSlots, setActiveSlots] = useState<{id: number, port: string, time: string, status: string, type: string, availableTrucks: number}[]>([]);
   const [socket, setSocket] = useState<any>(null);
   const [engineStatus, setEngineStatus] = useState('غير متصل');
   const [isMonitoring, setIsMonitoring] = useState(false);

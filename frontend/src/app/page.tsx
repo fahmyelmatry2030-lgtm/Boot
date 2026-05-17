@@ -111,7 +111,7 @@ export default function Dashboard() {
         updateTruckStatus(truckId, 'Booked');
         
         const truckSequence = trucks.find(t => t.id === truckId)?.sequence || 'غير معروف';
-        setToastMessage(`🎉 تم قنص موعد للشاحنة (${truckSequence}) بنجاح! المرجع: ${data.reference}`);
+        setToastMessage(`🎉 تم حجز موعد الشاحنة (${truckSequence}) بنجاح! المرجع: ${data.reference}`);
         
         setTimeout(() => setToastMessage(''), 5000);
       } else {

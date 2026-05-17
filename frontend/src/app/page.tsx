@@ -90,26 +90,6 @@ export default function Dashboard() {
 
   const fetchSlots = async () => {
     try {
-      const PORT_CODES: Record<string, string> = {
-        'جمرك البطحاء': '31',
-        'ميناء جدة الإسلامي': '1',
-        'ميناء الملك عبدالعزيز بالدمام': '2'
-      };
-      
-      const portCode = PORT_CODES[filterPort] || '31';
-      const newSlots: any[] = [];
-
-      if (!trucks || trucks.length === 0) {
-        newSlots.push({
-          id: Date.now(),
-          port: filterPort,
-          time: new Date().toLocaleTimeString('ar-SA'),
-          availableTrucks: 0,
-          status: 'يرجى إضافة شاحنة أولاً',
-          type: 'فحص فارغ'
-        });
-  const fetchSlots = async () => {
-    try {
       const res = await fetch('/api/check-slots', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

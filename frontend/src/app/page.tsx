@@ -33,6 +33,19 @@ export default function Dashboard() {
   }, [truckCount]);
 
   useEffect(() => {
+    // Restore session on load
+    const savedToken = localStorage.getItem('fasah_jwtToken');
+    const isLoggedIn = localStorage.getItem('fasah_isLoggedIn');
+    
+    if (isLoggedIn === 'true') {
+      if (savedToken) {
+        setJwtToken(savedToken);
+        setCurrentView('input');
+      } else {
+        setCurrentView('jwt-connect');
+      }
+    }
+
     // Cleanup polling on unmount
     return () => { 
       if (pollingRef.current) clearInterval(pollingRef.current);
@@ -41,6 +54,7 @@ export default function Dashboard() {
 
   const handleSystemLogin = () => {
     if (systemPassword === 'admin123') { // Simple hardcoded password for now
+      localStorage.setItem('fasah_isLoggedIn', 'true');
       setCurrentView('jwt-connect');
       setPasswordError('');
     } else {
@@ -81,6 +95,9 @@ export default function Dashboard() {
     }
     
     setEngineStatus('جاري تفعيل الرادار الداخلي (Vercel)...');
+    
+    // Save token to persist session
+    localStorage.setItem('fasah_jwtToken', jwtToken);
     
     // Switch view immediately to feel fast
     setJwtError('');
@@ -233,7 +250,12 @@ export default function Dashboard() {
             <span className="text-sm text-gray-700 font-medium">{engineStatus}</span>
           </div>
           <button 
-            onClick={() => setCurrentView('system-login')} 
+            onClick={() => {
+              localStorage.removeItem('fasah_isLoggedIn');
+              localStorage.removeItem('fasah_jwtToken');
+              setJwtToken('');
+              setCurrentView('system-login');
+            }} 
             className="text-gray-500 hover:text-red-500 font-medium px-4 py-2 rounded-md transition-colors text-sm"
           >
             تسجيل خروج

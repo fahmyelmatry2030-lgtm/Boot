@@ -20,6 +20,8 @@ export default function Dashboard() {
   const [passwordError, setPasswordError] = useState('');
   const [jwtToken, setJwtToken] = useState('');
   const [jwtError, setJwtError] = useState('');
+  const [sessionCookie, setSessionCookie] = useState('');
+  const [lastChecked, setLastChecked] = useState('');
 
   // Fasah Search Filters
   const [filterPurpose, setFilterPurpose] = useState('عبور');

@@ -40,6 +40,8 @@ export default function Dashboard() {
     if (isLoggedIn === 'true') {
       if (savedToken) {
         setJwtToken(savedToken);
+        setIsMonitoring(true);
+        setEngineStatus('الرادار نشط 🟢 (بدون خادم خارجي)');
         setCurrentView('input');
       } else {
         setCurrentView('jwt-connect');
@@ -51,6 +53,22 @@ export default function Dashboard() {
       if (pollingRef.current) clearInterval(pollingRef.current);
     }
   }, []);
+
+  // Handle automatic polling when monitoring is active
+  useEffect(() => {
+    if (isMonitoring && jwtToken) {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      // Run once immediately, then every 2 seconds
+      fetchSlots();
+      pollingRef.current = setInterval(fetchSlots, 2000);
+    } else {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    }
+    
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [isMonitoring, jwtToken, filterPurpose, filterType, filterPort]);
 
   const handleSystemLogin = () => {
     if (systemPassword === 'admin123') { // Simple hardcoded password for now
@@ -105,10 +123,7 @@ export default function Dashboard() {
     setEngineStatus('الرادار نشط 🟢 (بدون خادم خارجي)');
     setCurrentView('input');
     
-    // Start Polling via Next.js API Routes (Serverless)
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    
-    pollingRef.current = setInterval(fetchSlots, 2000); // Check every 2 seconds
+    // Polling is now handled automatically by the useEffect hook
   };
 
   const handleBook = async (slotId: number, truckId: number) => {
@@ -251,6 +266,7 @@ export default function Dashboard() {
           </div>
           <button 
             onClick={() => {
+              setIsMonitoring(false);
               localStorage.removeItem('fasah_isLoggedIn');
               localStorage.removeItem('fasah_jwtToken');
               setJwtToken('');

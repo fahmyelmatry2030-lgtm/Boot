@@ -106,61 +106,31 @@ export default function Dashboard() {
           status: 'يرجى إضافة شاحنة أولاً',
           type: 'فحص فارغ'
         });
-        setActiveSlots(newSlots);
-        return;
+  const fetchSlots = async () => {
+    try {
+      const res = await fetch('/api/check-slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          jwtToken,
+          purpose: filterPurpose,
+          type: filterType,
+          port: filterPort,
+          trucks: trucks
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success && data.slots && data.slots.length > 0) {
+        setActiveSlots(prev => {
+          const newSlots = [...data.slots, ...prev];
+          const unique = Array.from(new Map(newSlots.map(item => [item.id, item])).values());
+          return unique.slice(0, 10);
+        });
+        setLastChecked(new Date().toLocaleTimeString('ar-SA'));
       }
-
-      // Execute requests directly from the client's browser to bypass Vercel WAF IP ban!
-      await Promise.all(trucks.map(async (truck) => {
-        if (!truck.bayan) return;
-        
-        try {
-          const fasahUrl = `https://fasah.zatca.gov.sa/api/zatca-tas/v2/appointment/transit/getDeclarationInfo?decNo=${truck.bayan}&arrivalPort=${portCode}`;
-          
-          const response = await fetch(fasahUrl, {
-            method: 'GET',
-            headers: {
-              'Authorization': jwtToken, 
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            }
-          });
-
-          if (response.ok) {
-            newSlots.push({
-              id: truck.id + Date.now(),
-              port: filterPort,
-              time: `${new Date().toLocaleTimeString('ar-SA')} - استجابة سليمة`,
-              availableTrucks: 1,
-              status: 'فحص حقيقي (متصل)',
-              type: `بيان: ${truck.bayan}`,
-            });
-          } else {
-            newSlots.push({
-              id: truck.id + Date.now(),
-              port: filterPort,
-              time: `${new Date().toLocaleTimeString('ar-SA')} - خطأ: ${response.status}`,
-              availableTrucks: 0,
-              status: 'مرفوض',
-              type: `بيان: ${truck.bayan}`,
-            });
-          }
-        } catch (e: any) {
-          newSlots.push({
-            id: truck.id + Date.now(),
-            port: filterPort,
-            time: `${new Date().toLocaleTimeString('ar-SA')} - خطأ بالاتصال (CORS)`,
-            availableTrucks: 0,
-            status: 'فشل الفحص',
-            type: `بيان: ${truck.bayan}`,
-          });
-        }
-      }));
-
-      setActiveSlots(newSlots);
-      setLastChecked(new Date().toLocaleTimeString('ar-SA'));
-    } catch (error) {
-      console.error("Polling error:", error);
+    } catch (e) {
+      console.error('Polling error', e);
     }
   };
 

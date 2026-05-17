@@ -36,13 +36,14 @@ export default function Dashboard() {
     // Restore session on load
     const savedToken = localStorage.getItem('fasah_jwtToken');
     const isLoggedIn = localStorage.getItem('fasah_isLoggedIn');
+    const savedView = localStorage.getItem('fasah_currentView') as typeof currentView;
     
     if (isLoggedIn === 'true') {
       if (savedToken) {
         setJwtToken(savedToken);
         setIsMonitoring(true);
         setEngineStatus('الرادار نشط 🟢 (بدون خادم خارجي)');
-        setCurrentView('input');
+        setCurrentView(savedView && savedView === 'slots' ? 'slots' : 'input');
       } else {
         setCurrentView('jwt-connect');
       }
@@ -68,7 +69,12 @@ export default function Dashboard() {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
-  }, [isMonitoring, jwtToken, filterPurpose, filterType, filterPort]);
+  }, [isMonitoring, jwtToken, filterPurpose, filterType, filterPort, trucks]);
+
+  // Persist view state
+  useEffect(() => {
+    localStorage.setItem('fasah_currentView', currentView);
+  }, [currentView]);
 
   const handleSystemLogin = () => {
     if (systemPassword === 'admin123') { // Simple hardcoded password for now
@@ -270,6 +276,7 @@ export default function Dashboard() {
               setIsMonitoring(false);
               localStorage.removeItem('fasah_isLoggedIn');
               localStorage.removeItem('fasah_jwtToken');
+              localStorage.removeItem('fasah_currentView');
               setJwtToken('');
               setCurrentView('system-login');
             }} 

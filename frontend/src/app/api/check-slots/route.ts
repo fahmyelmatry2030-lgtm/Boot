@@ -32,7 +32,6 @@ export async function POST(request: Request) {
     }
 
     // REAL FASAH API INTEGRATION
-    // We iterate through all trucks and check their Bayan numbers
     await Promise.all(trucks.map(async (truck: any) => {
       if (!truck.bayan) return;
 
@@ -42,33 +41,56 @@ export async function POST(request: Request) {
         const response = await fetch(fasahUrl, {
           method: 'GET',
           headers: {
-            'Authorization': jwtToken, // e.g. "Bearer eyJhb..."
+            'Authorization': jwtToken, 
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           }
         });
 
-        // If Fasah returns 200, we check the content
         if (response.ok) {
           const fasahData = await response.json();
-          // We need to know what Fasah returns when there is a slot vs no slot.
-          // For now, if the response is successful and doesn't explicitly contain an error, we assume it's valid.
-          // Wait! The user said "مفيش مواعيد متاحه" appeared. That means getDeclarationInfo might return an error code or specific message.
-          
           slots.push({
-            id: truck.id,
+            id: truck.id + Date.now(),
             port: port,
-            time: `Bayan: ${truck.bayan} - ${new Date().toLocaleTimeString('ar-SA')}`,
+            time: `${new Date().toLocaleTimeString('ar-SA')} - استجابة سليمة`,
             availableTrucks: 1,
-            status: 'Fasah Responded',
-            type: 'Live Check',
-            rawData: fasahData // Send raw data to frontend for debugging
+            status: 'فحص حقيقي (Fasah)',
+            type: `بيان: ${truck.bayan}`,
+          });
+        } else {
+          // Push an error slot so user knows it failed
+          slots.push({
+            id: truck.id + Date.now(),
+            port: port,
+            time: `${new Date().toLocaleTimeString('ar-SA')} - خطأ: ${response.status}`,
+            availableTrucks: 0,
+            status: 'مرفوض من فسح',
+            type: `بيان: ${truck.bayan}`,
           });
         }
-      } catch (e) {
-        console.error(`Error checking truck ${truck.bayan}:`, e);
+      } catch (e: any) {
+        slots.push({
+          id: truck.id + Date.now(),
+          port: port,
+          time: `${new Date().toLocaleTimeString('ar-SA')} - خطأ بالاتصال`,
+          availableTrucks: 0,
+          status: 'فشل الفحص',
+          type: `بيان: ${truck.bayan}`,
+        });
       }
     }));
+
+    // If slots are still empty (e.g. no valid Bayan numbers entered), add a dummy so refresh works
+    if (slots.length === 0) {
+       slots.push({
+        id: Date.now(),
+        port: port,
+        time: new Date().toLocaleTimeString('ar-SA'),
+        availableTrucks: 0,
+        status: 'يرجى إدخال بيان',
+        type: 'فحص فارغ',
+      });
+    }
 
     return NextResponse.json({ success: true, slots });
   } catch (error: any) {

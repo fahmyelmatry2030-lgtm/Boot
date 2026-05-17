@@ -89,7 +89,8 @@ export default function Dashboard() {
           jwtToken,
           purpose: filterPurpose,
           type: filterType,
-          port: filterPort
+          port: filterPort,
+          trucks: trucks // Send the trucks to the backend to check their Bayan numbers
         })
       });
       

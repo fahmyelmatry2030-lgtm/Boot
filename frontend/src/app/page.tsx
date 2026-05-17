@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import { useStore } from '../store';
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+
 export default function Dashboard() {
   const [activeSlots, setActiveSlots] = useState<{id: number, port: string, time: string, status: string, type: string}[]>([]);
   const [socket, setSocket] = useState<any>(null);
@@ -29,7 +31,7 @@ export default function Dashboard() {
   }, [truckCount]);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:4000');
+    const newSocket = io(BACKEND_URL);
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
@@ -69,7 +71,7 @@ export default function Dashboard() {
     }
     setEngineStatus('جاري التحقق من التوكن...');
     try {
-      await fetch('http://localhost:4000/api/start-engine', { 
+      await fetch(`${BACKEND_URL}/api/start-engine`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jwtToken, socketId: socket.id })

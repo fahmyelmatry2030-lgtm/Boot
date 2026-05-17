@@ -63,12 +63,16 @@ export default function Dashboard() {
       setJwtError('يرجى إدخال التوكن');
       return;
     }
+    if (!socket || !socket.id) {
+      setJwtError('جاري الاتصال بالسيرفر المركزي، انتظر قليلاً...');
+      return;
+    }
     setEngineStatus('جاري التحقق من التوكن...');
     try {
       await fetch('http://localhost:4000/api/start-engine', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jwtToken })
+        body: JSON.stringify({ jwtToken, socketId: socket.id })
       });
       setJwtError('');
       // View change is handled by engine_login_success socket event

@@ -21,6 +21,11 @@ export default function Dashboard() {
   const [jwtToken, setJwtToken] = useState('');
   const [jwtError, setJwtError] = useState('');
 
+  // Fasah Search Filters
+  const [filterPurpose, setFilterPurpose] = useState('عبور');
+  const [filterType, setFilterType] = useState('دخول');
+  const [filterPort, setFilterPort] = useState('جمرك البطحاء');
+
   const [tempTrucks, setTempTrucks] = useState(Array.from({length: 1}, () => ({ license: '', sequence: '', bayan: '' })));
 
   useEffect(() => {
@@ -65,7 +70,12 @@ export default function Dashboard() {
         const res = await fetch('/api/check-slots', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jwtToken })
+          body: JSON.stringify({ 
+            jwtToken,
+            purpose: filterPurpose,
+            type: filterType,
+            port: filterPort
+          })
         });
         
         const data = await res.json();
@@ -239,9 +249,48 @@ export default function Dashboard() {
                 <h2 className="text-3xl font-bold text-[#0ea5e9] mb-2">⚡ SUPER FASAH</h2>
                 <p className="text-gray-500">أدخل بيانات الشاحنات</p>
               </div>
-              
-              <div className="w-full max-w-xs flex items-center justify-between mb-8">
-                <span className="font-bold text-gray-700">عدد الشاحنات:</span>
+              <div className="w-full max-w-sm space-y-4 mb-8 text-right">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">الغرض *</label>
+                  <select 
+                    className="w-full bg-gray-50 border border-gray-200 rounded p-2 text-gray-800 outline-none focus:border-[#0ea5e9]"
+                    value={filterPurpose}
+                    onChange={(e) => setFilterPurpose(e.target.value)}
+                  >
+                    <option value="عبور">عبور</option>
+                    <option value="استيراد">استيراد</option>
+                    <option value="تصدير">تصدير</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">نوع موعد العبور *</label>
+                  <select 
+                    className="w-full bg-gray-50 border border-gray-200 rounded p-2 text-gray-800 outline-none focus:border-[#0ea5e9]"
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                  >
+                    <option value="دخول">دخول</option>
+                    <option value="خروج">خروج</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">منفذ الوصول *</label>
+                  <select 
+                    className="w-full bg-gray-50 border border-gray-200 rounded p-2 text-gray-800 outline-none focus:border-[#0ea5e9]"
+                    value={filterPort}
+                    onChange={(e) => setFilterPort(e.target.value)}
+                  >
+                    <option value="جمرك البطحاء">جمرك البطحاء</option>
+                    <option value="ميناء جدة الإسلامي">ميناء جدة الإسلامي</option>
+                    <option value="ميناء الملك عبدالعزيز بالدمام">ميناء الملك عبدالعزيز بالدمام</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="w-full max-w-sm flex items-center justify-between mb-8 border-t border-gray-100 pt-6">
+                <span className="font-bold text-gray-700">عدد الشاحنات المراد قنصها:</span>
                 <input 
                   type="number" 
                   min="1" 
